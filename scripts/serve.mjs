@@ -40,6 +40,6 @@ createServer(async (req, res) => {
     } catch {
         res.writeHead(404).end('Not found');
     }
-}).listen(port, '127.0.0.1', () => {
+}).listen(port, process.env.HOST || '127.0.0.1', () => {
     console.log(`Preview: http://localhost:${port}`);
 });

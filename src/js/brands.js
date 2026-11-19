@@ -19,6 +19,17 @@ window.BRANDS = [
     { key: 'tf1', match: /tf1/i, text: 'TF1+', bg: 'linear-gradient(135deg,#071a4d,#1d4ed8)', fg: '#fff' },
     { key: 'crunchyroll', match: /crunchyroll/i, mark: 'crunchyroll', bg: '#f47521', fg: '#fff' },
 
+    // German public broadcasters and sideloaded apps
+    // Nebula and Moonlight keep their own colours (style fills in the mark survive the build).
+    { key: 'ard', match: /\bard\b|ard mediathek/i, mark: 'ard', bg: '#003480', fg: '#fff', pad: [24, 17] },
+    { key: 'zdf', match: /\bzdf/i, mark: 'zdf', bg: '#fa7d19', fg: '#fff', pad: [25, 20] },
+    { key: 'arte', match: /\barte\b/i, mark: 'arte', bg: 'linear-gradient(135deg,#141414,#2a2a2a)', fg: '#fa481c', pad: [31, 15] },
+    { key: 'nebula', match: /nebula/i, mark: 'nebula', bg: 'linear-gradient(135deg,#0d1220,#1b2238)', fg: '#fff', pad: [21, 22] },
+    { key: 'moonlight', match: /moonlight/i, mark: 'moonlight', bg: 'linear-gradient(135deg,#1f2228,#0e1013)', fg: '#fff', pad: [21, 22] },
+
+    // Inputs / casting (used by inputs in config.js)
+    { key: 'chromecast', mark: 'chromecast', bg: 'linear-gradient(135deg,#1a73e8,#4285f4)', fg: '#fff' },
+
     // Consoles (used by inputs in config.js)
     { key: 'playstation', mark: 'playstation', bg: 'linear-gradient(135deg,#00205c,#0070d1)', fg: '#fff' },
     { key: 'xbox', mark: 'xbox', bg: 'linear-gradient(135deg,#0a3a0a,#16a016)', fg: '#fff' },

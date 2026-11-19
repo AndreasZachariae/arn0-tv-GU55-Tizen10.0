@@ -61,3 +61,6 @@ native-snapshot.json
 .AppleDouble
 .Spotlight-V100
 .Trashes
+
+# private work area — kept out of git, and Claude Code is denied access (see .claude/settings.local.json)
+remote_button/

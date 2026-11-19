@@ -1,4 +1,23 @@
-# Arn0 Launcher
+# Arn0
+
+> Fork changes: adapted to a Samsung GU55 (GU55U8079FUXZG) on Tizen 10.0.
+>
+> **Quickstart (Windows, PowerShell).** Node 22 lives in `%LOCALAPPDATA%\Programs\node` and is not
+> on PATH; call `npm.cmd` from there (npm finds its own `node`). Ctrl+C stops a server.
+>
+> ```powershell
+> $env:Path = "$env:LOCALAPPDATA\Programs\node;$env:Path"   # optional: plain npm/node for this session
+>
+> npm.cmd run preview                     # browser preview -> http://localhost:8080
+> npm.cmd run devlog                      # debug log server on :8099 -> logs/tv.jsonl
+> Get-Content logs\tv.jsonl -Wait -Tail 20  # follow the TV's log in a second terminal
+> ```
+>
+> Open `http://localhost:8080/#all`, `#lab` or `#settings` to jump to a screen. With
+> `devLogUrl: 'http://<this-PC-ip>:8099/log'` in `src/js/config.local.js`, every launcher log line
+> (TV or preview) is posted to the devlog server; allow Node through the Windows firewall when
+> asked. Without the PATH line, use the full path:
+> `& "$env:LOCALAPPDATA\Programs\node\npm.cmd" run preview`.
 
 A quieter home screen for a Samsung Tizen TV: a clock, a row of your apps, a row of your consoles,
 and nothing else.
