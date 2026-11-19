@@ -53,7 +53,9 @@
     // ones to the edited Home list once, so nothing disappears from the TV after the update.
     function migrateInputs(home, savedInputs) {
         var cfg = window.LAUNCHER_CONFIG || {};
-        var list = Array.isArray(savedInputs) ? savedInputs : (cfg.inputs || []);
+        // Never edited on the TV: the old default inputs are now the `hdmi` entries in cfg.apps.
+        var list = Array.isArray(savedInputs) ? savedInputs
+            : (cfg.inputs || (cfg.apps || []).filter(function (a) { return a.hdmi; }));
         list.forEach(function (i) {
             if (i.hidden || !i.hdmi) return;
             home.push({ hdmi: i.hdmi, label: i.label, brand: i.brand, method: i.method });

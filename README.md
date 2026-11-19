@@ -21,6 +21,20 @@
 > (TV or preview) is posted to the devlog server; allow Node through the Windows firewall when
 > asked. Without the PATH line, use the full path:
 > `& "$env:LOCALAPPDATA\Programs\node\npm.cmd" run preview`.
+>
+> **Connecting to the TV with sdb.** A standalone sdb (4.2.36, no Tizen Studio) is installed in
+> `%LOCALAPPDATA%\Programs\tizen-sdb\data\tools` and is not on PATH either. The TV needs Developer
+> Mode on with this PC's IP entered (Apps → type `12345`); find the TV's IP under Settings →
+> Connection → Network → Network Status.
+>
+> ```powershell
+> $env:Path = "$env:LOCALAPPDATA\Programs\tizen-sdb\data\tools;$env:Path"   # sdb for this session
+>
+> sdb connect <TV_IP>        # port 26101 is the default; same as <TV_IP>:26101
+> sdb devices                # the TV should be listed as "device"
+> sdb capability             # read-only: what the TV allows
+> sdb disconnect <TV_IP>     # undo; the connection changes nothing on the TV
+> ```
 
 A quieter home screen for a Samsung Tizen TV: a clock, a row of your apps, a row of your consoles,
 and nothing else.

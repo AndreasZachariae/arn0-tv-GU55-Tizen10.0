@@ -23,6 +23,9 @@ PowerShell nor in Git Bash). Use the full path:
 ```
 
 Git Bash: `/c/Users/Andreas/AppData/Local/Programs/node/node.exe scripts/serve.mjs`.
+
+sdb (standalone 4.2.36, not on PATH) is at `%LOCALAPPDATA%\Programs\tizen-sdb\data\tools\sdb.exe`.
+It is listed for the user's own use (README Quickstart): do not run it against the TV.
 `npm run` finds `node` on its own. Start servers in the background and stop them when done
 (they hold ports 8080 / 8099).
 
