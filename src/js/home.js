@@ -5,6 +5,9 @@
     var CACHE_KEY = 'arn0.apps.v1';
     var REFRESH_AFTER_MS = 5 * 60 * 1000;
     var GRID_COLS = 5;
+    // Home: two rows of five tiles, which is what fits the 1680px content width unscrolled.
+    var HOME_COLS = 5;
+    var HOME_MAX = HOME_COLS * 2;
 
     var cfg = window.LAUNCHER_CONFIG;
     var log = DevLog.log;
@@ -79,9 +82,21 @@
         return tile;
     }
 
+    // Apps and HDMI inputs share this tile; an input adds a port badge whose dot shows the
+    // connection (see applyInputStatus).
     function appTile(item) {
         var wrap = el('div', 'app');
-        wrap.appendChild(tileFace(item));
+        var tile = tileFace(item);
+        if (item.kind === 'input') {
+            var badge = el('div', 'hdmi-badge');
+            var dot = el('span', 'dot');
+            badge.appendChild(dot);
+            badge.appendChild(document.createTextNode('HDMI ' + item.hdmi));
+            tile.appendChild(badge);
+            tile.classList.add('has-badge');
+            wrap._dot = dot;
+        }
+        wrap.appendChild(tile);
         wrap.appendChild(el('div', 'label', item.label));
         wrap._item = item;
         return wrap;
@@ -94,70 +109,27 @@
         return wrap;
     }
 
-    function allAppsTile() {
-        var wrap = el('div', 'app');
-        var tile = el('div', 'tile all-tile');
-        tile.innerHTML = '<svg viewBox="0 0 24 24" fill="#fff"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/>' +
-            '<rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/>' +
-            '<rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>';
-        wrap.appendChild(tile);
-        wrap.appendChild(el('div', 'label', 'All apps'));
-        wrap._item = { kind: 'all' };
-        return wrap;
-    }
-
-    function inputTile(input) {
-        var brand = findBrand(input.brand || '') || { bg: '#2a2f3a', fg: '#fff', mark: null };
-        var wrap = el('div', 'input');
-        var tile = el('div', 'tile');
-        tile.style.background = brand.bg;
-        if (brand.mark) tile.appendChild(markEl(brand));
-        var meta = el('div', 'meta');
-        meta.appendChild(el('div', 'name', input.label));
-        var port = el('div', 'port');
-        var dot = el('span', 'dot');
-        port.appendChild(dot);
-        port.appendChild(document.createTextNode('HDMI ' + input.hdmi));
-        meta.appendChild(port);
-        tile.appendChild(meta);
-        wrap.appendChild(tile);
-        wrap._item = { kind: 'input', hdmi: input.hdmi, label: input.label, method: input.method };
-        wrap._dot = dot;
-        return wrap;
-    }
-
-    // Console tile for Settings lists: brand colours and logo only.
-    function miniInputTile(input) {
-        var brand = findBrand(input.brand || '');
-        return miniTile({ label: input.label, brand: brand && { key: brand.key, bg: brand.bg, fg: brand.fg, mark: brand.mark } });
-    }
-
     // ---------- Home content
 
-    // Consoles: edited list from Settings, else config.js.
-    function inputs() {
-        return Prefs.get().inputs || cfg.inputs || [];
-    }
-
-    function setInputs(list) {
-        Prefs.get().inputs = list;
-        Prefs.save();
-        renderHome();
-    }
-
-    // Entries shown on Home: edited list from Settings, else config.js.
+    // Entries shown on Home (apps and HDMI inputs): edited list from Settings, else config.js.
     function homeEntries() {
         return Prefs.get().home || cfg.apps || [];
     }
 
+    // Two full rows and no scrolling: entries past HOME_MAX are not shown.
     function homeItems() {
-        return Apps.curated(state.apps, { apps: homeEntries() });
+        return Apps.curated(state.apps, { apps: homeEntries() }).slice(0, HOME_MAX);
+    }
+
+    function inputItems() {
+        return homeItems().filter(function (i) { return i.kind === 'input'; });
     }
 
     function setHomeItems(items) {
         Prefs.get().home = items.map(function (i) {
-            var entry = { id: i.id, label: i.label };
+            var entry = i.kind === 'input' ? { hdmi: i.hdmi, label: i.label } : { id: i.id, label: i.label };
             if (i.brand) entry.brand = i.brand.key;
+            if (i.method) entry.method = i.method;
             return entry;
         });
         Prefs.save();
@@ -165,31 +137,23 @@
     }
 
     function renderHome() {
-        var row = $('apps-row');
-        row.innerHTML = '';
+        var grid = $('home-grid');
+        grid.innerHTML = '';
         var items = homeItems();
-        if (!items.length) items = Apps.allSorted(state.apps, false).slice(0, 8);
-        items.forEach(function (item) { row.appendChild(appTile(item)); });
-        row.appendChild(allAppsTile());
-
-        var row2 = $('inputs-row');
-        row2.innerHTML = '';
-        inputs().forEach(function (input) {
-            if (!input.hidden) row2.appendChild(inputTile(input));
-        });
-        $('inputs-section').classList.toggle('hidden', !row2.children.length);
+        if (!items.length) items = Apps.allSorted(state.apps, false).slice(0, HOME_MAX);
+        items.forEach(function (item) { grid.appendChild(appTile(item)); });
         applyInputStatus();
         if (UI.isVisible('home')) UI.refresh();
     }
 
     function applyInputStatus() {
-        UI.children($('inputs-row')).forEach(function (tile) {
-            tile._dot.classList.toggle('on', state.hdmi[tile._item.hdmi] === true);
+        UI.children($('home-grid')).forEach(function (tile) {
+            if (tile._dot) tile._dot.classList.toggle('on', state.hdmi[tile._item.hdmi] === true);
         });
     }
 
     function refreshInputStatus() {
-        if (!inputs().length) return;
+        if (!inputItems().length) return;
         Inputs.hdmiStatus().then(function (status) {
             state.hdmi = status;
             applyInputStatus();
@@ -217,9 +181,8 @@
         if (window.Weather) actions = actions.concat(Weather.actions());
         if (window.RenderProbe) actions = actions.concat(RenderProbe.actions());
         if (window.PlatformProbe) actions = actions.concat(PlatformProbe.actions());
-        inputs().forEach(function (input) {
-            var item = { kind: 'input', hdmi: input.hdmi, label: input.label };
-            var name = input.label + ' (HDMI ' + input.hdmi + ')';
+        inputItems().forEach(function (item) {
+            var name = item.label + ' (HDMI ' + item.hdmi + ')';
             actions.push({ label: name + ': switch + viewer', run: function () { openInput(item, 'switch+viewer'); } });
             actions.push({ label: name + ': switch only', run: function () { openInput(item, 'switch'); } });
             actions.push({ label: name + ': inside launcher', run: function () { openInput(item, 'inapp'); } });
@@ -408,9 +371,9 @@
         UI.register('home', {
             el: $('home'),
             startRow: 1,
-            hints: [['OK', 'Open'], ['▲', 'Settings']],
+            hints: [['OK', 'Open'], ['▲', 'All apps · Settings']],
             rows: function () {
-                return [[$('gear')], UI.children($('apps-row')), UI.children($('inputs-row'))];
+                return [[$('all-btn'), $('gear')]].concat(UI.chunk(UI.children($('home-grid')), HOME_COLS));
             },
             activate: function (item) {
                 if (item.kind === 'app') launchApp(item);
@@ -422,6 +385,7 @@
             onBack: function () { return true; }
         });
         $('gear')._item = { kind: 'settings' };
+        $('all-btn')._item = { kind: 'all' };
 
         UI.register('all', {
             el: $('all'),
@@ -486,8 +450,7 @@
         apps: function () { return state.apps; },
         homeItems: homeItems,
         setHomeItems: setHomeItems,
-        inputs: inputs,
-        setInputs: setInputs,
+        maxItems: HOME_MAX,
         hdmiStatus: function () { return state.hdmi; },
         // An HDMI input shown inside the launcher: no screen saver over it.
         tvMode: function () { return state.tvMode; },
@@ -496,7 +459,6 @@
         updateClock: updateClock,
         reloadApps: loadApps,
         miniTile: miniTile,
-        miniInputTile: miniInputTile,
         onAppsChanged: function (fn) { listeners.push(fn); }
     };
 })();

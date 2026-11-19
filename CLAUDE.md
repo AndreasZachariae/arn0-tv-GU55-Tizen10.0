@@ -28,7 +28,7 @@ Git Bash: `/c/Users/Andreas/AppData/Local/Programs/node/node.exe scripts/serve.m
 
 ## Preview
 
-- `#all`, `#lab`, `#settings`, `#homeapps`, `#consoles` in the URL open a screen directly.
+- `#all`, `#lab`, `#settings`, `#homeapps` in the URL open a screen directly.
 - Keys: arrows + Enter, Esc/Backspace = Back, `R` `G` `Y` `B` = colour keys.
 - The preview uses `src/js/tizen-mock.js`. Its app list does **not** contain the app ids from
   `config.js` (ARD, ZDF, arte, Nebula, Moonlight, TizenYouTube), so those tiles are skipped on
@@ -49,10 +49,19 @@ Git Bash: `/c/Users/Andreas/AppData/Local/Programs/node/node.exe scripts/serve.m
   Moonlight) keep their colours.
 - Crop marks by setting the SVG `viewBox` to the logo's bounding box so `pad` controls the size.
 - Record the source and licence of every new mark in `src/img/marks/SOURCES.md`.
-- Do not set `pad` on brands used by HDMI input tiles: input tiles size the mark in CSS and
-  `pad` would override it.
+- HDMI input tiles use the same tile; CSS lifts their mark 12px to clear the "HDMI n" badge.
+
+## Home layout
+
+- One grid (`#home-grid`) of two rows of five, `HOME_MAX` = 10 tiles in `home.js`; no scrolling.
+  All apps and Settings are buttons in the top-right row.
+- Apps and HDMI inputs share one list: `config.js` `apps` (`{ id }` / `{ match }` /
+  `{ hdmi }` entries), or the edited copy in `Prefs.get().home`. Settings → Apps on Home moves,
+  renames, removes and adds them; there is no separate inputs list any more (`prefs.js`
+  migrates old saved `inputs` once, via `homeVersion`).
+- The preview mock reports HDMI 2 and 4 as connected, HDMI 1 as not.
 
 ## Verify
 
-Check changes visually in the preview (Home, a scrolled row with a focused tile, `#all`,
+Check changes visually in the preview (Home, a focused tile in each row, the top buttons, `#all`,
 `#homeapps`) before reporting them done.

@@ -35,8 +35,10 @@
                 font: 'manrope',        // see Appearance.FONTS
                 names: 'always'         // app names under tiles: 'always' | 'focused' | 'never'
             },
-            home: null,                 // [{ id, label, brand }] once edited; null = config.js apps
-            inputs: null                // [{ hdmi, label, brand, method, hidden }] once edited; null = config.js
+            // [{ id, label, brand } | { hdmi, label, brand, method }] once edited; null = config.js apps
+            home: null,
+            // 2: HDMI inputs live in the Home list (before, they had their own `inputs` row)
+            homeVersion: 2
         };
     }
 
@@ -44,6 +46,17 @@
         if (!saved) return;
         Object.keys(target).forEach(function (k) {
             if (saved[k] !== undefined) target[k] = saved[k];
+        });
+    }
+
+    // Settings saved before homeVersion 2 kept HDMI inputs in a separate row: append the visible
+    // ones to the edited Home list once, so nothing disappears from the TV after the update.
+    function migrateInputs(home, savedInputs) {
+        var cfg = window.LAUNCHER_CONFIG || {};
+        var list = Array.isArray(savedInputs) ? savedInputs : (cfg.inputs || []);
+        list.forEach(function (i) {
+            if (i.hidden || !i.hdmi) return;
+            home.push({ hdmi: i.hdmi, label: i.label, brand: i.brand, method: i.method });
         });
     }
 
@@ -56,8 +69,10 @@
                 merge(prefs.wallpaper, saved.wallpaper);
                 merge(prefs.screensaver, saved.screensaver);
                 merge(prefs.appearance, saved.appearance);
-                if (Array.isArray(saved.home) && saved.home.length) prefs.home = saved.home;
-                if (Array.isArray(saved.inputs)) prefs.inputs = saved.inputs;
+                if (Array.isArray(saved.home) && saved.home.length) {
+                    prefs.home = saved.home;
+                    if (!saved.homeVersion) migrateInputs(prefs.home, saved.inputs);
+                }
             } else {
                 var legacy = localStorage.getItem(LEGACY_WALLPAPER_KEY);
                 if (legacy) prefs.wallpaper.photo = legacy;

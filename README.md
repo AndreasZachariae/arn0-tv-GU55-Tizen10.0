@@ -1,6 +1,9 @@
 # Arn0
 
-> Fork changes: adapted to a Samsung GU55 (GU55U8079FUXZG) on Tizen 10.0.
+> Fork changes: adapted to a Samsung GU55 (GU55U8079FUXZG) on Tizen 10.0. Home is one tile grid
+> of two rows (at most 10 tiles, no scrolling) instead of an apps row plus a consoles row; HDMI
+> inputs such as the Chromecast are ordinary tiles in that grid with a connection dot, and
+> **All apps** sits next to the gear.
 >
 > **Quickstart (Windows, PowerShell).** Node 22 lives in `%LOCALAPPDATA%\Programs\node` and is not
 > on PATH; call `npm.cmd` from there (npm finds its own `node`). Ctrl+C stops a server.
@@ -147,7 +150,7 @@ src/                  everything that goes into the .wgt
   img/marks/          brand marks (Simple Icons CC0, Custom Brand Icons MIT; see SOURCES.md)
   img/tiles/          marks recoloured per brand (generated at build)
   img/wallpapers/     1920x1080 wallpapers with the readability scrim baked in (generated)
-  js/config.js        your apps, consoles, HDMI method, locale, theme
+  js/config.js        your Home tiles (apps and HDMI inputs), HDMI method, locale, theme
   js/config.local.js  gitignored per-TV overrides, merged over config.js (not in the repo)
   js/brands.js        tile colours and marks per brand
   js/apps.js          list / filter / launch via tizen.application
@@ -176,9 +179,9 @@ Saved on the TV in `localStorage`. They survive restarts and in-place updates, n
 
 - **Background** — Off (plain gradient), one photo, or rotate: on each Home, 30 s, 5 min, 15 min,
   1 hour, daily.
-- **Apps on Home** — OK on an app opens Move / Remove; OK on the right-hand slot adds one.
-- **Consoles** — per console: rename (on-screen keyboard), HDMI port, logo, how it opens, hide,
-  reorder, remove; plus add a console.
+- **Apps on Home** — apps and HDMI inputs in one list, at most 10 (two rows of five). OK on a
+  tile opens Move / Rename / Remove (plus HDMI port for an input); OK on the right-hand list adds
+  an app or a free HDMI port.
 - **Appearance** — 24/12-hour clock, date shown/hidden, date language (English, Español, Français),
   font, app names (always / when selected / never).
 - **Navigation sound** — turn arrow-key sounds on or off, choose Soft, Warm or Bright, and preview
@@ -255,8 +258,10 @@ changes the source (privilege `tv.window`, public). What happens next is undocum
 - `inapp` — show the input full screen inside the launcher; Back returns to the dashboard. Probably
   no automatic Game Mode or VRR this way.
 
-The **Lab** screen (Blue) tries each method per console and reports what happened. The dot on each
-tile is green when the TV reports that port as connected.
+An input is an entry in the `apps` list of `config.js`, `{ hdmi: 1, label: 'Chromecast', brand:
+'chromecast' }`, shown as a normal tile with an "HDMI n" badge; an entry's own `method` overrides
+`inputMethod`. The **Lab** screen (Blue) tries each method per input tile and reports what
+happened. The dot in the badge is green when the TV reports that port as connected.
 
 To collect Lab results on your computer, point `devLogUrl` in `config.js` at it and run
 `npm run devlog`; entries land in `logs/tv.jsonl`. Set it to `null` to disable, which is the

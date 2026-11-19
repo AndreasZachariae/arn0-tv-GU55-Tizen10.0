@@ -7,9 +7,10 @@
  *   { match: 'netflix' }              case-insensitive regex on id or name
  *   label                             optional display name
  *   brand                             optional key from js/brands.js (otherwise guessed from the name)
- * Entries that match nothing are skipped.
- *
- * inputs: HDMI ports shown in the second row. Set `hdmi` to the port each device is plugged into.
+ *   { hdmi: 1, label, brand }         an HDMI input as a tile (port the device is plugged into);
+ *                                     its dot turns green while the port reports a connection
+ * Entries that match nothing are skipped. Home shows two rows of five, so at most 10 tiles.
+ * This order is the default; Settings → Apps on Home changes it on the TV.
  */
 window.LAUNCHER_CONFIG = {
     apps: [
@@ -19,14 +20,11 @@ window.LAUNCHER_CONFIG = {
         { id: 'yPSlpvfeTf.ZDFmediathek', label: 'ZDF', brand: 'zdf' },
         { id: 'aLlph042JZ.arte', label: 'ARTE', brand: 'arte' },
         { id: 'PFpUF2pEzm.nebulasmarttv', label: 'Nebula', brand: 'nebula' },
-        { id: 'MoonLightS.MoonlightWasm', label: 'Moonlight', brand: 'moonlight' }
-    ],
-
-    inputs: [
+        { id: 'MoonLightS.MoonlightWasm', label: 'Moonlight', brand: 'moonlight' },
         { hdmi: 1, label: 'Chromecast', brand: 'chromecast' }
     ],
 
-    // How an input tile switches the TV. See README "HDMI inputs".
+    // How an HDMI tile switches the TV (an entry's own `method` wins). See README "HDMI inputs".
     //   'switch+viewer'  set the TV source, then open Samsung's TV viewer (default)
     //   'switch'         only set the TV source
     //   'inapp'          show the input full screen inside the launcher (Back returns)
@@ -90,7 +88,7 @@ window.LAUNCHER_CONFIG = {
  * back before a build, and the overlay reaches the browser preview and the .wgt alike.
  *
  * Merged one level deep, so a local file can set weather.latitude without restating the rest of
- * the block. Arrays (apps, inputs) and plain values replace the default outright.
+ * the block. Arrays (apps) and plain values replace the default outright.
  */
 (function () {
     'use strict';

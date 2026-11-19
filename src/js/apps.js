@@ -68,6 +68,14 @@
         var used = {};
         var out = [];
         (cfg.apps || []).forEach(function (entry) {
+            // HDMI inputs sit in the same list, so they order and move like apps.
+            if (entry.hdmi) {
+                if (!used['hdmi:' + entry.hdmi]) {
+                    used['hdmi:' + entry.hdmi] = true;
+                    out.push(inputItem(entry));
+                }
+                return;
+            }
             var re = entry.match ? new RegExp(entry.match, 'i') : null;
             var candidates = apps.filter(function (a) {
                 if (used[a.id]) return false;
@@ -106,6 +114,18 @@
         };
     }
 
+    // entry: { hdmi, label, brand, method } from config.js apps or the saved Home list
+    function inputItem(entry) {
+        return {
+            kind: 'input',
+            id: 'hdmi:' + entry.hdmi,
+            hdmi: entry.hdmi,
+            label: entry.label || 'HDMI ' + entry.hdmi,
+            brand: entry.brand ? findBrand(entry.brand) : null,
+            method: entry.method
+        };
+    }
+
     function describe(app) {
         return {
             id: app.id, name: app.name, show: app.show, packageId: app.packageId,
@@ -119,6 +139,7 @@
         launchable: launchable,
         curated: curated,
         allSorted: allSorted,
+        inputItem: inputItem,
         describe: describe,
         launch: launch,
         withTimeout: withTimeout

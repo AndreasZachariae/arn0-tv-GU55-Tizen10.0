@@ -1,4 +1,4 @@
-/* Settings: overview, Background, Apps on Home, Consoles, Appearance, Samsung, Advanced. */
+/* Settings: overview, Background, Apps on Home (apps and HDMI inputs), Appearance, Samsung, Advanced. */
 (function () {
     'use strict';
 
@@ -16,17 +16,7 @@
     // fails (UnknownError) and app controls are accepted but show nothing.
     var SAMSUNG_HOME = 'com.samsung.tv.csfs';
 
-    var LOGOS = [
-        { key: 'playstation', label: 'PlayStation' },
-        { key: 'xbox', label: 'Xbox' },
-        { key: 'switch', label: 'Nintendo Switch' },
-        { key: '', label: 'None' }
-    ];
-
-    var METHODS = [
-        { key: 'switch+viewer', label: 'TV input', hint: 'Game Mode works' },
-        { key: 'inapp', label: 'Inside the launcher', hint: 'Back returns here' }
-    ];
+    var HDMI_PORTS = [1, 2, 3, 4];
 
     // ---------- Generic list pages
 
@@ -106,11 +96,9 @@
 
     function overviewEntries() {
         var a = Prefs.get().appearance;
-        var shown = Home.inputs().filter(function (i) { return !i.hidden; }).length;
         return [
             { label: 'Background', value: wallpaperSummary(), run: function () { UI.show('bg'); } },
-            { label: 'Apps on Home', value: Home.homeItems().length + ' apps', run: function () { UI.show('homeapps'); } },
-            { label: 'Consoles', value: shown + ' on Home', run: function () { UI.show('consoles'); } },
+            { label: 'Apps on Home', value: Home.homeItems().length + ' of ' + Home.maxItems + ' tiles', run: function () { UI.show('homeapps'); } },
             { label: 'Appearance', value: Appearance.font(a.font).label + ' · ' + (a.clock === '12h' ? '12-hour' : '24-hour'), run: function () { UI.show('appearance'); } },
             { label: 'Navigation sound', value: soundSummary(), run: function () { UI.show('sound-settings'); } },
             { label: 'Screen saver', value: screensaverSummary(), run: function () { UI.show('screensaver-settings'); } },
@@ -353,17 +341,29 @@
 
     var ed = { col: 0, idx: [0, 0], moving: -1, snapshot: null, items: [], others: [] };
 
+    // An HDMI port not on Home, offered for adding: config.js's entry for it if there is one
+    // (so a removed Chromecast comes back with its name and logo), else a plain "HDMI n".
+    function hdmiOffer(port) {
+        var entry = (window.LAUNCHER_CONFIG.apps || []).find(function (e) { return e.hdmi === port; });
+        return Apps.inputItem(entry || { hdmi: port });
+    }
+
     function edLoad() {
         ed.items = Home.homeItems().slice();
         var onHome = {};
         ed.items.forEach(function (i) { onHome[i.id] = true; });
-        ed.others = Apps.allSorted(Home.apps(), false).filter(function (a) { return !onHome[a.id]; });
+        var ports = HDMI_PORTS.filter(function (n) { return !onHome['hdmi:' + n]; }).map(hdmiOffer);
+        var apps = Apps.allSorted(Home.apps(), false).filter(function (a) { return !onHome[a.id]; });
+        ed.others = ports.concat(apps);
     }
 
     function edRow(item, moving) {
         var row = el('div', 'ed-item' + (moving ? ' moving' : ''));
         row.appendChild(Home.miniTile(item));
         row.appendChild(el('span', 'ed-label', item.label));
+        if (item.kind === 'input' && item.label !== 'HDMI ' + item.hdmi) {
+            row.appendChild(el('span', 'ed-port', 'HDMI ' + item.hdmi));
+        }
         if (moving) row.appendChild(el('span', 'ed-move', '↕'));
         return row;
     }
@@ -375,8 +375,8 @@
         var other = $('ed-other');
         other.innerHTML = '';
         ed.others.forEach(function (item) { other.appendChild(edRow(item, false)); });
-        $('ed-home-title').textContent = 'On Home · ' + ed.items.length;
-        $('ed-other-title').textContent = 'Add apps · ' + ed.others.length;
+        $('ed-home-title').textContent = 'On Home · ' + ed.items.length + ' of ' + Home.maxItems;
+        $('ed-other-title').textContent = 'Add · ' + ed.others.length;
         if (!ed.others.length) ed.col = 0;
     }
 
@@ -442,6 +442,8 @@
                 } else {
                     edMenu();
                 }
+            } else if (ed.items.length >= Home.maxItems) {
+                UI.toast('Home is full (' + Home.maxItems + ' tiles). Remove one first.');
             } else if (ed.others.length) {
                 var added = ed.others[ed.idx[1]];
                 ed.items.push(added);
@@ -455,11 +457,41 @@
         return false;
     }
 
+    // Replace the item at Home position i and save.
+    function edReplace(i, changes) {
+        ed.items[i] = Object.assign({}, ed.items[i], changes);
+        edSave();
+        edRender();
+        UI.refresh();
+    }
+
+    function edPortMenu(i) {
+        var item = ed.items[i];
+        var status = Home.hdmiStatus();
+        UI.menu('HDMI port', HDMI_PORTS.map(function (n) {
+            return {
+                label: 'HDMI ' + n + (status[n] ? ' · connected' : ''),
+                checked: n === item.hdmi,
+                run: function () {
+                    if (n === item.hdmi) return;
+                    if (ed.items.some(function (o) { return o.id === 'hdmi:' + n; })) {
+                        UI.toast('HDMI ' + n + ' is already on Home');
+                        return;
+                    }
+                    var changes = { hdmi: n, id: 'hdmi:' + n };
+                    if (item.label === 'HDMI ' + item.hdmi) changes.label = 'HDMI ' + n;
+                    edReplace(i, changes);
+                    Home.refreshInputStatus();
+                }
+            };
+        }));
+    }
+
     function edMenu() {
         var i = ed.idx[0];
         var item = ed.items[i];
         if (!item) return;
-        UI.menu(item.label, [
+        var options = [
             {
                 label: 'Move', run: function () {
                     ed.moving = i;
@@ -469,9 +501,19 @@
                 }
             },
             {
+                label: 'Rename', run: function () {
+                    rename(item.label, function (name) { edReplace(i, { label: name }); });
+                }
+            }
+        ];
+        if (item.kind === 'input') {
+            options.push({ label: 'HDMI port · HDMI ' + item.hdmi, run: function () { edPortMenu(i); } });
+        }
+        options.push(
+            {
                 label: 'Remove from Home', run: function () {
                     if (ed.items.length <= 1) {
-                        UI.toast('Home needs at least one app');
+                        UI.toast('Home needs at least one tile');
                         return;
                     }
                     ed.items.splice(i, 1);
@@ -481,7 +523,8 @@
                 }
             },
             { label: 'Cancel' }
-        ]);
+        );
+        UI.menu(item.label, options);
     }
 
     function edBack() {
@@ -492,115 +535,6 @@
         edRender();
         UI.refresh();
         return true;
-    }
-
-    // ---------- Consoles
-
-    var renderConsoles = null;
-
-    function methodOf(input) {
-        var key = input.method || window.LAUNCHER_CONFIG.inputMethod;
-        return METHODS.find(function (m) { return m.key === key; }) || METHODS[0];
-    }
-
-    function logoOf(input) {
-        return LOGOS.find(function (l) { return l.key === (input.brand || ''); }) || LOGOS[3];
-    }
-
-    function consoleEntries() {
-        var entries = Home.inputs().map(function (input, i) {
-            return {
-                label: input.label,
-                value: input.hidden ? 'Hidden' : 'HDMI ' + input.hdmi + ' · ' + methodOf(input).label,
-                mini: Home.miniInputTile(input),
-                run: function () { consoleMenu(i); }
-            };
-        });
-        entries.push({ label: '+ Add a console', value: '', run: addConsole });
-        return entries;
-    }
-
-    function editInputs(change) {
-        var list = Home.inputs().map(function (i) { return Object.assign({}, i); });
-        change(list);
-        Home.setInputs(list);
-        renderConsoles();
-        UI.refresh();
-    }
-
-    function consoleMenu(i) {
-        var c = Home.inputs()[i];
-        var count = Home.inputs().length;
-        var status = Home.hdmiStatus();
-        var options = [
-            {
-                label: 'Rename', run: function () {
-                    rename(c.label, function (name) { editInputs(function (l) { l[i].label = name; }); });
-                }
-            },
-            {
-                label: 'HDMI port · HDMI ' + c.hdmi, run: function () {
-                    UI.menu('HDMI port', [1, 2, 3, 4].map(function (n) {
-                        return {
-                            label: 'HDMI ' + n + (status[n] ? ' · connected' : ''),
-                            checked: n === c.hdmi,
-                            run: function () { editInputs(function (l) { l[i].hdmi = n; }); }
-                        };
-                    }));
-                }
-            },
-            {
-                label: 'Logo · ' + logoOf(c).label, run: function () {
-                    UI.menu('Logo', LOGOS.map(function (logo) {
-                        return {
-                            label: logo.label,
-                            checked: logo.key === (c.brand || ''),
-                            run: function () { editInputs(function (l) { l[i].brand = logo.key; }); }
-                        };
-                    }));
-                }
-            },
-            {
-                label: 'Opens · ' + methodOf(c).label, run: function () {
-                    UI.menu('Opens', METHODS.map(function (m) {
-                        return {
-                            label: m.label + ' · ' + m.hint,
-                            checked: m.key === methodOf(c).key,
-                            run: function () { editInputs(function (l) { l[i].method = m.key; }); }
-                        };
-                    }));
-                }
-            },
-            {
-                label: c.hidden ? 'Show on Home' : 'Hide from Home',
-                run: function () { editInputs(function (l) { l[i].hidden = !c.hidden; }); }
-            }
-        ];
-        if (i > 0) {
-            options.push({ label: 'Move earlier', run: function () { editInputs(function (l) { l.splice(i - 1, 0, l.splice(i, 1)[0]); }); } });
-        }
-        if (i < count - 1) {
-            options.push({ label: 'Move later', run: function () { editInputs(function (l) { l.splice(i + 1, 0, l.splice(i, 1)[0]); }); } });
-        }
-        options.push({
-            label: 'Remove', run: function () {
-                UI.menu('Remove ' + c.label + '?', [
-                    { label: 'Remove', run: function () { editInputs(function (l) { l.splice(i, 1); }); } },
-                    { label: 'Cancel' }
-                ]);
-            }
-        });
-        options.push({ label: 'Cancel' });
-        UI.menu(c.label, options);
-    }
-
-    function addConsole() {
-        var used = {};
-        Home.inputs().forEach(function (i) { used[i.hdmi] = true; });
-        var port = [1, 2, 3, 4].find(function (n) { return !used[n]; }) || 1;
-        editInputs(function (l) { l.push({ hdmi: port, label: 'Console', brand: '' }); });
-        var index = Home.inputs().length - 1;
-        rename('Console', function (name) { editInputs(function (l) { l[index].label = name; }); });
     }
 
     // ---------- Rename dialog (uses Samsung's on-screen keyboard)
@@ -665,8 +599,6 @@
         registerList('settings', overviewEntries,
             [['OK', 'Change'], ['◀ ▶', 'Switch column'], ['Back', 'Home']], true);
         registerList('advanced', advancedEntries, [['OK', 'Run'], ['Back', 'Settings']]);
-        renderConsoles = registerList('consoles', consoleEntries,
-            [['OK', 'Options'], ['Back', 'Settings']]);
 
         UI.register('bg', {
             el: $('bg-settings'),

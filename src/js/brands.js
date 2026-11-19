@@ -27,10 +27,10 @@ window.BRANDS = [
     { key: 'nebula', match: /nebula/i, mark: 'nebula', bg: 'linear-gradient(135deg,#0d1220,#1b2238)', fg: '#fff', pad: [21, 22] },
     { key: 'moonlight', match: /moonlight/i, mark: 'moonlight', bg: 'linear-gradient(135deg,#1f2228,#0e1013)', fg: '#fff', pad: [21, 22] },
 
-    // Inputs / casting (used by inputs in config.js)
+    // HDMI devices (used by `hdmi` entries in config.js apps; same tile as an app)
     { key: 'chromecast', mark: 'chromecast', bg: 'linear-gradient(135deg,#1a73e8,#4285f4)', fg: '#fff' },
 
-    // Consoles (used by inputs in config.js)
+    // Consoles (for `hdmi` entries too)
     { key: 'playstation', mark: 'playstation', bg: 'linear-gradient(135deg,#00205c,#0070d1)', fg: '#fff' },
     { key: 'xbox', mark: 'xbox', bg: 'linear-gradient(135deg,#0a3a0a,#16a016)', fg: '#fff' },
     { key: 'switch', mark: 'nintendoswitch', bg: 'linear-gradient(135deg,#b3000e,#ff2a2a)', fg: '#fff' }
